@@ -1,0 +1,26 @@
+# Công cụ cài cục bộ (Python, Node, Bun, ffmpeg...) - tải lại theo README
+_tools/
+yt-dlp/
+
+# Dữ liệu cá nhân / đầu ra
+downloads/
+exports/
+*.lnk
+app/settings.json
+app/templates/
+app/.webview/
+app/_tmp/
+
+# Log, cache
+*.log
+__pycache__/
+*.pyc
+
+# Build OpenCut
+node_modules/
+.next/
+.turbo/
+
+# Bí mật
+.env*
+!.env.example

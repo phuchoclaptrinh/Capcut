@@ -1,0 +1,1245 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>YT Downloader</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='6' fill='%23e5484d'/><path d='M12 6v9m0 0-4-4m4 4 4-4M7 18h10' stroke='white' stroke-width='2' fill='none' stroke-linecap='round'/></svg>">
+<style>
+  :root {
+    --bg: #f5f5f4; --card: #ffffff; --text: #1c1917; --muted: #78716c; --line: #e7e5e4;
+    --accent: #e5484d; --accent-hover: #d13a3f; --accent-soft: #fdecec;
+    --ok: #2f9e44; --err: #d9480f; --track: #eeeceb; --input: #fafaf9; --sel: #3b82f6;
+    --stage-bg: #232323;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141414; --card: #1d1d1d; --text: #ededed; --muted: #9a9a9a; --line: #2e2e2e;
+      --accent: #f2555a; --accent-hover: #ff6b70; --accent-soft: #3a1f20;
+      --ok: #51cf66; --err: #ff8a50; --track: #2a2a2a; --input: #171717; --sel: #60a5fa;
+      --stage-bg: #0d0d0d;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 "Segoe UI", system-ui, sans-serif; }
+  header { display: flex; align-items: center; gap: 22px; padding: 12px 24px; flex-wrap: wrap;
+    background: var(--card); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 20; }
+  header h1 { font-size: 18px; margin: 0; display: flex; align-items: center; gap: 10px; }
+  .logo { width: 28px; height: 28px; border-radius: 8px; background: var(--accent); display: grid; place-items: center; }
+  .tabs { display: flex; gap: 4px; }
+  .tabs button { border: none; background: transparent; padding: 8px 14px; border-radius: 9px; color: var(--muted); }
+  .tabs button.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  main { margin: 0 auto; padding: 24px 16px 60px; max-width: 780px; }
+  main.wide { max-width: none; padding: 14px 16px 30px; }
+  h2 { font-size: 15px; margin: 0; }
+  h3 { font-size: 12px; margin: 0 0 10px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin-bottom: 16px; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  input[type=text], input[type=number], textarea { min-width: 0; padding: 9px 12px; font: inherit; color: var(--text);
+    background: var(--input); border: 1px solid var(--line); border-radius: 10px; outline: none; }
+  input[type=text]:focus, input[type=number]:focus, textarea:focus { border-color: var(--accent); }
+  textarea { resize: vertical; }
+  #url { flex: 1; resize: none; padding: 11px 13px; line-height: 1.4; max-height: 160px; }
+  input[type=number] { width: 80px; }
+  input[type=color] { width: 30px; height: 30px; padding: 0; border: 1px solid var(--line); border-radius: 8px; background: none; cursor: pointer; flex-shrink: 0; }
+  input[type=color]::-webkit-color-swatch-wrapper { padding: 2px; }
+  input[type=color]::-webkit-color-swatch { border: none; border-radius: 6px; }
+  input[type=range] { accent-color: var(--accent); }
+  button { font: inherit; cursor: pointer; border-radius: 10px; padding: 9px 14px;
+    border: 1px solid var(--line); background: var(--card); color: var(--text); white-space: nowrap; }
+  button:hover:not(:disabled) { border-color: var(--muted); }
+  button:disabled { opacity: .45; cursor: default; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button.primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
+  button.small { padding: 5px 10px; font-size: 13px; border-radius: 8px; }
+  button.big { width: 100%; padding: 13px; font-size: 16px; margin-top: 16px; }
+  button.icon { padding: 3px 8px; font-size: 13px; border-radius: 7px; }
+  button.ghost { border-color: transparent; background: transparent; }
+  .preview { display: none; gap: 14px; margin-top: 16px; }
+  .preview.show { display: flex; }
+  .preview img { width: 168px; aspect-ratio: 16/9; object-fit: cover; border-radius: 10px; background: var(--track); flex-shrink: 0; }
+  .preview .meta { min-width: 0; }
+  .preview .title { font-weight: 600; overflow-wrap: anywhere; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .msg { margin-top: 12px; font-size: 14px; color: var(--err); display: none; }
+  .msg.show { display: block; }
+  .msg.info { color: var(--muted); }
+  .opts { display: grid; grid-template-columns: 130px 1fr; gap: 14px 12px; align-items: center; }
+  .seg { display: inline-flex; background: var(--track); border-radius: 10px; padding: 3px; flex-wrap: wrap; }
+  .seg button { border: none; background: transparent; padding: 6px 14px; border-radius: 8px; }
+  .seg button.on { background: var(--card); box-shadow: 0 1px 3px rgba(0,0,0,.15); font-weight: 600; }
+  select { font: inherit; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--input); color: var(--text); max-width: 100%; }
+  label.check { display: inline-flex; gap: 8px; align-items: center; cursor: pointer; }
+  input[type=checkbox] { width: 17px; height: 17px; accent-color: var(--accent); }
+  .folder { font-family: Consolas, monospace; font-size: 13px; overflow-wrap: anywhere; flex: 1; min-width: 0; }
+  .hidden { display: none !important; }
+  .jobs-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .job { padding: 12px 0; border-top: 1px solid var(--line); }
+  .job:first-of-type { border-top: none; }
+  .job .top { display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; }
+  .job .name { font-weight: 600; overflow-wrap: anywhere; }
+  .badge { font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 99px; margin-right: 6px;
+    background: var(--track); color: var(--muted); vertical-align: 1px; }
+  .badge.render { background: var(--accent-soft); color: var(--accent); }
+  .job .acts { display: flex; gap: 6px; flex-shrink: 0; }
+  .bar { height: 6px; background: var(--track); border-radius: 99px; overflow: hidden; margin: 8px 0 4px; }
+  .bar > div { height: 100%; background: var(--accent); border-radius: 99px; transition: width .3s; }
+  .job.done .bar > div { background: var(--ok); }
+  .job.error .bar > div, .job.cancelled .bar > div { background: var(--muted); }
+  .job .err { color: var(--err); font-size: 13px; overflow-wrap: anywhere; }
+  .empty { color: var(--muted); text-align: center; padding: 14px 0 4px; font-size: 14px; }
+  .spin { width: 15px; height: 15px; border: 2px solid currentColor; border-right-color: transparent;
+    border-radius: 50%; display: inline-block; animation: r .7s linear infinite; vertical-align: -2px; }
+  @keyframes r { to { transform: rotate(360deg); } }
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #222; color: #fff;
+    padding: 10px 14px; border-radius: 10px; display: flex; gap: 12px; align-items: center; z-index: 50;
+    box-shadow: 0 6px 24px rgba(0,0,0,.3); font-size: 14px; }
+  .toast button { background: transparent; color: #fff; border-color: #666; }
+
+  /* ================= Trình chỉnh sửa ================= */
+  .ed-top { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+  .ed-top select { min-width: 160px; }
+  .ed-top #tplName { width: 220px; }
+  .ed-top .sp { flex: 1; }
+  .editor { display: grid; grid-template-columns: 260px minmax(0, 1fr) 330px; gap: 14px; align-items: start; }
+  .editor > .card { margin: 0; padding: 14px; }
+  .panel-scroll { max-height: calc(100vh - 210px); overflow: auto; }
+  .presets { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 18px; }
+  .preset { height: 58px; border-radius: 10px; background: #3a3a3a; display: grid; place-items: center; cursor: pointer;
+    border: 2px solid transparent; overflow: hidden; padding: 0 4px; }
+  .preset:hover { border-color: var(--accent); }
+  .preset span { font-size: 19px; line-height: 1.2; white-space: nowrap; paint-order: stroke fill; }
+  .addbtns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 18px; }
+  .addbtn { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 4px; font-size: 12px; border-radius: 10px; }
+  .addbtn svg { width: 22px; height: 22px; }
+  .layers { display: flex; flex-direction: column; gap: 2px; }
+  .layers .li { display: flex; align-items: center; gap: 6px; padding: 5px 4px 5px 8px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+  .layers .li:hover { background: var(--track); }
+  .layers .li.on { background: var(--accent-soft); }
+  .layers .li .ic { width: 22px; text-align: center; color: var(--muted); font-size: 12px; font-weight: 700; }
+  .layers .li .n { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .layers .li.hid .n { opacity: .45; text-decoration: line-through; }
+  .layers .li button { padding: 1px 6px; font-size: 12px; border-color: transparent; background: transparent; }
+  .layers .li button:hover { border-color: var(--line); }
+
+  .ratios { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; margin-bottom: 10px; }
+  .ratios button { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 10px; font-size: 12px;
+    border-color: transparent; background: transparent; min-width: 54px; }
+  .ratios button i { display: block; border: 2px solid currentColor; border-radius: 3px; height: 16px; }
+  .ratios button.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .stage-wrap { display: flex; justify-content: center; align-items: center; background: var(--stage-bg); border-radius: 12px; padding: 14px; }
+  .stage { position: relative; overflow: hidden; user-select: none; background: #000; touch-action: none; }
+  .stage .bg { position: absolute; inset: 0; overflow: hidden; }
+  .stage .bg video, .stage .bg img { position: absolute; inset: -6%; width: 112%; height: 112%; object-fit: cover; filter: blur(14px) brightness(.94); }
+  .stage .vid { position: absolute; cursor: move; }
+  .stage .vid video, .stage .vid img { width: 100%; height: 100%; display: block; pointer-events: none; object-fit: fill; }
+  .stage .vid .ph { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 16px;
+    color: #aaa; font-size: 14px; background: repeating-linear-gradient(45deg, #2b2b2b 0 12px, #303030 12px 24px); }
+  .stage .vid.sel { outline: 2px solid var(--sel); z-index: 4; }
+  .layer { position: absolute; cursor: move; }
+  .layer:hover { outline: 1px dashed rgba(255,255,255,.6); }
+  .layer.sel { outline: 2px solid var(--sel); z-index: 5; }
+  .layer.off { display: none; }
+  .layer.outside { display: none; }
+  .layer.outside.sel { display: block; opacity: .35; }
+  .rs, .rw { position: absolute; width: 14px; height: 14px; background: #fff; border: 2px solid var(--sel); border-radius: 50%; display: none; z-index: 6; }
+  .rs { right: -8px; bottom: -8px; cursor: nwse-resize; }
+  .rw { right: -8px; top: calc(50% - 7px); cursor: ew-resize; border-radius: 4px; }
+  .sel > .rs, .sel > .rw { display: block; }
+  .layer img { width: 100%; height: 100%; display: block; pointer-events: none; }
+  .layer.cover-delogo { background: repeating-linear-gradient(45deg, rgba(255,255,255,.3) 0 6px, rgba(0,0,0,.3) 6px 12px); }
+  .layer .txt { white-space: pre-wrap; overflow-wrap: break-word; line-height: 1.32; pointer-events: none; }
+  .layer .txt span { paint-order: stroke fill; }
+  .layer .txt [contenteditable] { pointer-events: auto; outline: none; cursor: text; }
+  .guide { position: absolute; background: #f0f; display: none; z-index: 8; pointer-events: none; }
+  .guide.v { top: 0; bottom: 0; width: 1px; left: 50%; }
+  .guide.h { left: 0; right: 0; height: 1px; top: 50%; }
+  .player { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+  .player input[type=range] { flex: 1; }
+  .player .t { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); min-width: 92px; text-align: center; }
+  .play { width: 36px; height: 36px; border-radius: 50%; padding: 0; display: grid; place-items: center; }
+
+  .props { display: flex; flex-direction: column; gap: 14px; font-size: 14px; }
+  .props .grp { display: flex; flex-direction: column; gap: 8px; }
+  .props .lbl { font-size: 12px; font-weight: 600; color: var(--muted); display: flex; justify-content: space-between; align-items: center; }
+  .props .lbl b { font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+  .props textarea { width: 100%; font-size: 15px; }
+  .props .row { flex-wrap: nowrap; gap: 6px; }
+  .props input[type=number] { width: 64px; padding: 5px 6px; }
+  .props input[type=range] { width: 100%; min-width: 0; }
+  .swatches { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+  .sw { width: 22px; height: 22px; border-radius: 50%; border: 1px solid rgba(128,128,128,.5); cursor: pointer; padding: 0; }
+  .sw.on { outline: 2px solid var(--sel); outline-offset: 1px; }
+  .props .head { display: flex; align-items: center; gap: 6px; }
+  .props .head h3 { margin: 0; flex: 1; }
+  .fontpick { position: relative; }
+  .fontbtn { width: 100%; text-align: left; display: flex; justify-content: space-between; font-size: 16px; padding: 8px 12px; }
+  .fontlist { position: absolute; left: 0; right: 0; top: calc(100% + 4px); background: var(--card); border: 1px solid var(--line);
+    border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.25); max-height: 340px; overflow: auto; z-index: 30; padding: 4px; }
+  .fontlist div { padding: 7px 10px; border-radius: 7px; cursor: pointer; font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fontlist div:hover { background: var(--track); }
+  .fontlist div.on { background: var(--accent-soft); }
+  .fontlist .add { font-family: inherit !important; font-size: 14px; color: var(--accent); font-weight: 600; border-top: 1px solid var(--line); border-radius: 0; margin-top: 4px; }
+  .corners { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+  .corners button { padding: 5px 0; font-size: 13px; }
+  details summary { cursor: pointer; font-size: 12px; font-weight: 600; color: var(--muted); }
+  details .row { margin-top: 8px; }
+  .help { font-size: 12px; color: var(--muted); }
+  .kbd { font-size: 11px; color: var(--muted); }
+
+  /* ---- Xuất hàng loạt */
+  .files { max-height: 320px; overflow: auto; margin: 10px 0; }
+  .files .f { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); font-size: 14px; }
+  .files .f:first-child { border-top: none; }
+  .files .f span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+
+  @media (max-width: 1180px) { .editor { grid-template-columns: 230px minmax(0, 1fr); } .editor > .right { grid-column: 1 / -1; } .panel-scroll { max-height: none; } }
+  @media (max-width: 760px) { .editor { grid-template-columns: 1fr; } }
+  @media (max-width: 560px) {
+    .opts { grid-template-columns: 1fr; gap: 6px; }
+    .opts > .lbl { margin-top: 8px; }
+    .preview img { width: 112px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="logo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><path d="M12 4v11m0 0-5-5m5 5 5-5M5 20h14"/></svg></span>YT Downloader</h1>
+  <nav class="tabs" id="tabs">
+    <button data-tab="download">Tải video</button>
+    <button data-tab="editor">Mẫu chỉnh sửa</button>
+    <button data-tab="export">Xuất hàng loạt</button>
+  </nav>
+  <button class="primary" id="ocBtn" style="margin-left:auto" title="Mở trình chỉnh sửa video OpenCut (giống CapCut)">✂ Chỉnh sửa video (OpenCut)</button>
+</header>
+
+<main id="main">
+  <!-- ======================= TẢI VIDEO ======================= -->
+  <div id="tab-download">
+    <section class="card">
+      <div class="row" style="align-items:flex-start">
+        <textarea id="url" rows="1" placeholder="Dán link YouTube, TikTok, Facebook… (dán nhiều link, mỗi dòng một link, để tải hàng loạt)"></textarea>
+        <button id="pasteBtn" title="Dán từ clipboard">Dán</button>
+        <button id="infoBtn">Xem thông tin</button>
+      </div>
+      <div id="msg" class="msg"></div>
+      <div id="preview" class="preview">
+        <img id="thumb" alt="">
+        <div class="meta">
+          <div id="pTitle" class="title"></div>
+          <div id="pSub" class="muted"></div>
+          <label id="plWrap" class="check hidden" style="margin-top:8px">
+            <input id="playlist" type="checkbox"> <span id="plText"></span>
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="opts">
+        <div class="lbl">Loại</div>
+        <div><span class="seg" id="modeSeg">
+          <button data-mode="video">Video</button><button data-mode="audio">Chỉ âm thanh</button>
+        </span></div>
+
+        <div class="lbl lang-only hidden">Giọng đọc</div>
+        <div class="lang-only hidden"><select id="audioLang"></select>
+          <span class="muted" id="langNote"></span></div>
+
+        <div class="lbl video-only">Chất lượng</div>
+        <div class="video-only"><select id="quality"></select></div>
+
+        <div class="lbl audio-only">Định dạng</div>
+        <div class="audio-only"><select id="audioFormat">
+          <option value="mp3">MP3</option><option value="m4a">M4A (AAC)</option>
+          <option value="opus">Opus</option><option value="flac">FLAC</option><option value="wav">WAV</option>
+        </select></div>
+
+        <div class="lbl video-only">Phụ đề</div>
+        <div class="video-only"><label class="check"><input id="subs" type="checkbox"> Kèm phụ đề tiếng Việt / tiếng Anh (nếu có)</label></div>
+
+        <div class="lbl video-only">Áp mẫu</div>
+        <div class="video-only"><select id="afterTpl"></select>
+          <span class="muted"> tải xong tự xuất bản đã chỉnh vào thư mục xuất</span></div>
+
+        <div class="lbl">Lưu vào</div>
+        <div class="row">
+          <span id="outdir" class="folder"></span>
+          <button class="small" id="pickBtn">Đổi…</button>
+          <button class="small" data-open-dir="outdir">Mở</button>
+        </div>
+      </div>
+      <button id="dlBtn" class="primary big">Tải xuống</button>
+    </section>
+  </div>
+
+  <!-- ======================= MẪU CHỈNH SỬA ======================= -->
+  <div id="tab-editor" class="hidden">
+    <div id="edMain">
+      <div class="ed-top">
+        <select id="tplSelect" title="Chọn mẫu"></select>
+        <input type="text" id="tplName" placeholder="Tên mẫu">
+        <button class="small" id="tplNew">+ Mẫu mới</button>
+        <button class="small" id="tplDup">Nhân bản</button>
+        <button class="small" id="tplDel">Xoá</button>
+        <span class="muted" id="saveState"></span>
+        <span class="sp"></span>
+        <button class="small" id="undoBtn" title="Hoàn tác (Ctrl+Z)">↶ Hoàn tác</button>
+        <button class="small" id="redoBtn" title="Làm lại (Ctrl+Y)">↷ Làm lại</button>
+        <button class="primary" id="edExport">Xuất video…</button>
+      </div>
+
+      <div class="editor">
+        <!-- Cột trái: thêm thành phần + danh sách lớp -->
+        <section class="card panel-scroll">
+          <h3>Thêm vào video</h3>
+          <div class="addbtns">
+            <button class="addbtn" data-add="text"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 6V4h14v2M12 4v16m-3 0h6"/></svg>Chữ</button>
+            <button class="addbtn" data-add="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg>Logo / ảnh</button>
+            <button class="addbtn" data-add="cover"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="3" stroke-dasharray="3 3"/><path d="M8 12h8"/></svg>Che logo cũ</button>
+          </div>
+          <h3>Kiểu chữ có sẵn</h3>
+          <div class="presets" id="presets"></div>
+          <p class="help" style="margin:-10px 0 16px">Bấm để thêm chữ. Nếu đang chọn một lớp chữ, bấm sẽ đổi kiểu cho lớp đó.</p>
+          <h3>Các lớp</h3>
+          <div class="layers" id="layerList"></div>
+        </section>
+
+        <!-- Giữa: khung hình -->
+        <section class="card" style="padding:12px">
+          <div class="ratios" id="ratios"></div>
+          <div class="stage-wrap" id="stageWrap">
+            <div class="stage" id="stage">
+              <div class="bg" id="stBg"><video id="bgv" muted playsinline preload="auto"></video><img id="bgi" alt=""></div>
+              <div class="vid" id="stVid" data-id="__video">
+                <video id="fgv" playsinline preload="auto"></video><img id="fgi" alt="">
+                <div class="ph" id="vidPh">Chưa có video xem trước.<br>Bấm “Chọn video xem trước” bên dưới.</div>
+                <div class="rs"></div>
+              </div>
+              <div id="stLayers"></div>
+              <div class="guide v" id="gv"></div><div class="guide h" id="gh"></div>
+            </div>
+          </div>
+          <div class="player">
+            <button class="play" id="playBtn" title="Phát / dừng (Space)">▶</button>
+            <span class="t" id="tLabel">0:00 / 0:00</span>
+            <input type="range" id="seek" min="0" max="0" step="0.01" value="0">
+            <button class="small" id="frameBtn">Chọn video xem trước…</button>
+          </div>
+          <p class="help" style="margin:8px 2px 0">Kéo để di chuyển · kéo chấm tròn ở góc để phóng to/thu nhỏ · bấm đúp vào chữ để sửa ·
+            <span class="kbd">Delete</span> xoá · <span class="kbd">Ctrl+D</span> nhân bản · <span class="kbd">mũi tên</span> dịch chuyển · <span class="kbd">Ctrl+Z</span> hoàn tác</p>
+        </section>
+
+        <!-- Phải: thuộc tính -->
+        <section class="card panel-scroll right"><div class="props" id="props"></div></section>
+      </div>
+    </div>
+    <section class="card hidden" id="noTpl" style="text-align:center;max-width:520px;margin:40px auto">
+      <h2 style="margin-bottom:8px">Chưa có mẫu nào</h2>
+      <p class="muted">Mẫu giống như một project trong CapCut: thiết kế logo, chữ, khung hình một lần rồi áp cho bao nhiêu video cũng được.</p>
+      <button class="primary" id="tplFirst">+ Tạo mẫu đầu tiên</button>
+    </section>
+  </div>
+
+  <!-- ======================= XUẤT HÀNG LOẠT ======================= -->
+  <div id="tab-export" class="hidden">
+    <section class="card">
+      <div class="opts">
+        <div class="lbl">Mẫu</div>
+        <div class="row"><select id="exTpl"></select> <button class="small" id="exEdit">Sửa mẫu</button></div>
+        <div class="lbl">Xuất vào</div>
+        <div class="row">
+          <span id="exportDir" class="folder"></span>
+          <button class="small" id="pickExportBtn">Đổi…</button>
+          <button class="small" data-open-dir="export_dir">Mở</button>
+        </div>
+        <div class="lbl">Render bằng</div>
+        <div class="muted" id="encoder">…</div>
+      </div>
+    </section>
+    <section class="card">
+      <div class="jobs-head">
+        <h2 id="filesHead">Video cần xuất</h2>
+        <div class="row">
+          <button class="small" id="addFiles">+ Thêm video…</button>
+          <button class="small" id="clearFiles">Xoá hết</button>
+        </div>
+      </div>
+      <div class="files" id="files"></div>
+      <button class="primary big" id="renderBtn">Xuất</button>
+    </section>
+  </div>
+
+  <section class="card" id="jobsCard">
+    <div class="jobs-head">
+      <h2>Danh sách công việc</h2>
+      <button class="small" id="clearBtn">Xoá mục đã xong</button>
+    </div>
+    <div id="jobs"></div>
+  </section>
+</main>
+<div class="toast hidden" id="toast"><span id="toastText"></span><button class="small" id="toastBtn">Xem tiến độ</button></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const QUALITIES = [['best', 'Tốt nhất'], [2160, '4K (2160p)'], [1440, '1440p'], [1080, '1080p'],
+                   [720, '720p'], [480, '480p'], [360, '360p']];
+let settings = {}, info = null, infoUrl = '';
+let templates = [], fonts = [];
+
+async function api(path, body) {
+  const r = await fetch(path, body === undefined ? {} : {
+    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error || r.statusText);
+  return data;
+}
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtTime = s => { if (s == null || isNaN(s)) return '0:00'; s = Math.round(s);
+  const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = String(s % 60).padStart(2, '0');
+  return h ? `${h}:${String(m).padStart(2, '0')}:${x}` : `${m}:${x}`; };
+const fmtSpeed = b => { if (!b) return ''; const u = ['B', 'KB', 'MB', 'GB']; let i = 0;
+  while (b >= 1024 && i < 3) { b /= 1024; i++; } return `${b.toFixed(i ? 1 : 0)} ${u[i]}/s`; };
+const baseName = p => p.split(/[\\/]/).pop();
+const typing = () => { const a = document.activeElement;
+  return a && (['INPUT', 'TEXTAREA', 'SELECT'].includes(a.tagName) || a.isContentEditable); };
+
+let toastTimer;
+function toast(text, withBtn) {
+  $('toastText').textContent = text; $('toastBtn').classList.toggle('hidden', !withBtn);
+  $('toast').classList.remove('hidden'); clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => $('toast').classList.add('hidden'), 5000);
+}
+$('toastBtn').onclick = () => { $('toast').classList.add('hidden'); setTab('export'); };
+
+$('ocBtn').onclick = async () => {
+  const b = $('ocBtn'), label = b.textContent;
+  b.disabled = true; b.innerHTML = '<span class="spin"></span> Đang mở OpenCut…';
+  try { await api('/api/opencut/open', {}); }
+  catch (e) { toast('Không mở được OpenCut: ' + e.message); }
+  finally { b.disabled = false; b.textContent = label; }
+};
+
+// ============================================================ Tabs
+function setTab(tab) {
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+  for (const t of ['download', 'editor', 'export']) $('tab-' + t).classList.toggle('hidden', t !== tab);
+  $('main').classList.toggle('wide', tab === 'editor');
+  $('jobsCard').classList.toggle('hidden', tab === 'editor');
+  if (tab !== 'editor') { $('fgv').pause(); }
+  if (tab === 'editor') { if (!tpl && templates.length) loadTemplate(templates[0].id); else layoutStage(); }
+  try { localStorage.setItem('tab', tab); } catch {}
+}
+$('tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setTab(b.dataset.tab); });
+
+// ============================================================ Tải video
+function showMsg(text, isInfo) {
+  $('msg').textContent = text || ''; $('msg').classList.toggle('show', !!text); $('msg').classList.toggle('info', !!isInfo);
+}
+
+function fillQualities(heights) {
+  const cur = $('quality').value || String(settings.quality || 'best');
+  const max = heights && heights.length ? heights[0] : Infinity;
+  $('quality').innerHTML = QUALITIES
+    .filter(([v]) => v === 'best' || v <= max || (max < 360 && v === 360))
+    .map(([v, t]) => `<option value="${v}">${t}</option>`).join('');
+  $('quality').value = [...$('quality').options].some(o => o.value === cur) ? cur : 'best';
+}
+
+const langName = (() => {
+  let dn = null; try { dn = new Intl.DisplayNames(['vi'], {type: 'language'}); } catch {}
+  return l => { let n = null; try { n = dn && dn.of(l.code); } catch {}
+    return n && n !== l.code ? n.charAt(0).toUpperCase() + n.slice(1) : l.name; };
+})();
+
+function fillLangs(langs) {
+  const has = langs && langs.length > 1;
+  document.querySelectorAll('.lang-only').forEach(e => e.classList.toggle('hidden', !has));
+  if (!has) { $('audioLang').innerHTML = ''; return; }
+  const dubs = langs.filter(l => !l.original)
+    .sort((a, b) => (b.code === 'vi') - (a.code === 'vi') || langName(a).localeCompare(langName(b), 'vi'));
+  const orig = langs.find(l => l.original);
+  $('audioLang').innerHTML = `<option value="">Giọng gốc${orig ? ' — ' + esc(langName(orig)) : ''}</option>` +
+    dubs.map(l => `<option value="${esc(l.code)}">${esc(langName(l))} (lồng tiếng)</option>`).join('');
+  $('audioLang').value = dubs.some(l => l.code === settings.audio_lang) ? settings.audio_lang : '';
+  $('langNote').textContent = ` ${dubs.length} bản lồng tiếng`;
+}
+
+function setMode(mode) {
+  settings.mode = mode;
+  document.querySelectorAll('#modeSeg button').forEach(b => b.classList.toggle('on', b.dataset.mode === mode));
+  document.querySelectorAll('.video-only').forEach(e => e.classList.toggle('hidden', mode !== 'video'));
+  document.querySelectorAll('.audio-only').forEach(e => e.classList.toggle('hidden', mode !== 'audio'));
+}
+
+const getUrls = () => $('url').value.split(/\s+/).filter(u => /^https?:\/\//i.test(u));
+
+function fitUrlBox() {
+  $('url').style.height = 'auto';
+  $('url').style.height = Math.min($('url').scrollHeight + 2, 160) + 'px';
+}
+
+async function loadInfo() {
+  const urls = getUrls();
+  if (urls.length > 1) {
+    info = null; $('preview').classList.remove('show'); fillLangs(null);
+    showMsg(`Đã nhận ${urls.length} link — bấm “Tải xuống” để tải tất cả.`, true);
+    return;
+  }
+  const url = $('url').value.trim();
+  if (!url) return;
+  showMsg(''); info = null; $('preview').classList.remove('show'); fillLangs(null);
+  $('infoBtn').disabled = true; $('infoBtn').innerHTML = '<span class="spin"></span> Đang lấy…';
+  try {
+    info = await api('/api/info', {url}); infoUrl = url;
+    const v = info.video, pl = info.playlist;
+    const src = v || pl;
+    $('thumb').src = src.thumbnail || ''; $('thumb').classList.toggle('hidden', !src.thumbnail);
+    $('pTitle').textContent = src.title || url;
+    $('pSub').textContent = v ? [v.uploader, fmtTime(v.duration), v.heights[0] && `tối đa ${v.heights[0]}p`].filter(Boolean).join(' · ')
+                              : [pl.uploader, `${pl.count} video`].filter(Boolean).join(' · ');
+    $('plWrap').classList.toggle('hidden', !pl);
+    if (pl) {
+      $('playlist').checked = !v;
+      $('plText').textContent = v ? `Tải cả playlist “${pl.title}” (${pl.count} video)` : `Tải cả playlist (${pl.count} video)`;
+    }
+    fillQualities(v ? v.heights : null);
+    fillLangs(v ? v.audio_langs : null);
+    $('preview').classList.add('show');
+  } catch (e) {
+    showMsg('Không lấy được thông tin: ' + e.message);
+  } finally {
+    $('infoBtn').disabled = false; $('infoBtn').textContent = 'Xem thông tin';
+  }
+}
+
+async function download() {
+  const urls = getUrls();
+  if (!urls.length) { $('url').focus(); showMsg($('url').value.trim() ? 'Link phải bắt đầu bằng http:// hoặc https://' : ''); return; }
+  const common = {mode: settings.mode, quality: $('quality').value, audio_format: $('audioFormat').value,
+                  subs: $('subs').checked, outdir: settings.outdir, after_template: $('afterTpl').value};
+  try {
+    if (urls.length > 1) {
+      for (const url of urls) await api('/api/download', {...common, url});
+    } else {
+      const url = urls[0];
+      const same = info && infoUrl === url;
+      const playlist = same && info.playlist ? $('playlist').checked : false;
+      const title = same ? (playlist ? info.playlist.title : (info.video || info.playlist).title) : null;
+      const langSel = same && $('audioLang').options.length ? $('audioLang') : null;
+      const audio_lang = langSel ? langSel.value : undefined;  // undefined -> giọng gốc, không đổi lựa chọn đã nhớ
+      await api('/api/download', {...common, url, playlist, audio_lang,
+        title: title && audio_lang ? `${title} [${langSel.selectedOptions[0].text.replace(' (lồng tiếng)', '')}]` : title});
+      if (langSel) settings.audio_lang = audio_lang;
+    }
+    settings.after_template = common.after_template;
+    $('url').value = ''; fitUrlBox(); info = null; $('preview').classList.remove('show'); fillLangs(null); showMsg('');
+    refreshJobs();
+  } catch (e) { showMsg('Lỗi: ' + e.message); }
+}
+
+$('modeSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setMode(b.dataset.mode); });
+$('infoBtn').onclick = loadInfo;
+$('dlBtn').onclick = download;
+$('url').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); download(); } });
+$('url').addEventListener('input', fitUrlBox);
+$('url').addEventListener('paste', () => setTimeout(() => { fitUrlBox(); loadInfo(); }, 0));
+$('pasteBtn').onclick = async () => {
+  const {text} = await api('/api/clipboard', {});
+  if (text.trim()) { $('url').value = text.trim(); fitUrlBox(); loadInfo(); }
+  else { $('url').focus(); showMsg('Clipboard đang trống — hãy copy link trước.'); }
+};
+$('pickBtn').onclick = async () => {
+  $('pickBtn').disabled = true;
+  try { const r = await api('/api/pick-folder', {}); if (r.outdir) { settings.outdir = r.outdir; $('outdir').textContent = r.outdir; } }
+  finally { $('pickBtn').disabled = false; }
+};
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-open-dir]'); if (b) api('/api/open', {which: b.dataset.openDir});
+});
+
+// ============================================================ Danh sách công việc
+const STATUS = {queued: 'Đang chờ', downloading: 'Đang tải', processing: 'Đang xử lý',
+                done: 'Hoàn tất', error: 'Lỗi', cancelled: 'Đã huỷ'};
+
+function renderJobs(jobs) {
+  if (!jobs.length) {
+    $('jobs').innerHTML = '<div class="empty">Chưa có gì. Dán link để tải, hoặc chọn video ở tab “Xuất hàng loạt”.</div>';
+    return;
+  }
+  $('jobs').innerHTML = jobs.map(j => {
+    const active = ['queued', 'downloading', 'processing'].includes(j.status);
+    const render = j.kind === 'render';
+    const parts = [render && j.status === 'processing' ? 'Đang xuất' : STATUS[j.status]];
+    if (j.item) parts.push(`video ${j.item}`);
+    if (j.status === 'downloading' || (render && j.status === 'processing')) {
+      if (j.stage) parts.push(j.stage);
+      parts.push(`${j.percent.toFixed(1)}%`);
+      if (j.speed) parts.push(fmtSpeed(j.speed));
+      if (j.eta != null) parts.push(`còn ${fmtTime(j.eta)}`);
+    } else if (j.stage) parts.push(j.stage.replace(/^FFmpeg/, ''));
+    return `<div class="job ${j.status}">
+      <div class="top">
+        <div class="name"><span class="badge ${render ? 'render' : ''}">${render ? 'Xuất' : 'Tải'}</span>${esc(j.title)}</div>
+        <div class="acts">
+          ${active ? `<button class="small" data-cancel="${j.id}">Huỷ</button>` : ''}
+          ${j.status === 'done' ? `<button class="small" data-open="${j.id}">Mở thư mục</button>` : ''}
+        </div>
+      </div>
+      <div class="bar"><div style="width:${j.status === 'queued' ? 0 : j.percent}%"></div></div>
+      <div class="muted">${esc(parts.join(' · '))}</div>
+      ${j.error && j.status !== 'done' ? `<div class="err">${esc(j.error)}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+let lastJobs = '';
+async function refreshJobs() {
+  try {
+    const jobs = await api('/api/jobs');
+    const s = JSON.stringify(jobs);
+    if (s !== lastJobs) { lastJobs = s; renderJobs(jobs); }
+  } catch { /* server tắt */ }
+}
+$('jobs').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.cancel) api('/api/cancel', {id: b.dataset.cancel}).then(refreshJobs);
+  if (b.dataset.open) api('/api/open', {id: b.dataset.open});
+});
+$('clearBtn').onclick = () => api('/api/clear', {}).then(refreshJobs);
+
+// ============================================================ Mẫu chỉnh sửa
+let tpl = null, selId = null, editingId = null;
+const LAYER_NAMES = {logo: 'Logo / ảnh', text: 'Chữ', cover: 'Che logo cũ'};
+const LAYER_ICONS = {logo: '▣', text: 'T', cover: '▒'};
+const COVER_MODES = {blur: 'Làm mờ', color: 'Phủ màu', delogo: 'Xoá mờ'};
+const RATIOS = [['original', 'Gốc'], ['16:9', '16:9'], ['9:16', '9:16'], ['1:1', '1:1'], ['4:5', '4:5'], ['4:3', '4:3'], ['3:4', '3:4']];
+const SWATCHES = ['#ffffff', '#000000', '#ffe600', '#ff3b30', '#ff9500', '#34c759', '#00c7ff', '#007aff', '#af52de', '#ff2d92'];
+const DEFAULT_CANVAS = {ratio: 'original', bg: 'blur', bgColor: '#000000', video: {mode: 'fit', scale: 1, cx: 0.5, cy: 0.5}};
+const PRESETS = [
+  {name: 'Cơ bản', font: 'BeVietnamPro-Bold.ttf', color: '#ffffff', stroke: 0.06, strokeColor: '#000000'},
+  {name: 'Nền đen', font: 'BeVietnamPro-Bold.ttf', color: '#ffffff', bg: '#000000', bgOpacity: 0.6},
+  {name: 'Vàng nổi bật', font: 'Anton-Regular.ttf', color: '#ffe600', stroke: 0.08, strokeColor: '#000000'},
+  {name: 'Nền đỏ', font: 'BeVietnamPro-Black.ttf', color: '#ffffff', bg: '#e5484d', bgOpacity: 1},
+  {name: 'Nền trắng', font: 'BeVietnamPro-Bold.ttf', color: '#111111', bg: '#ffffff', bgOpacity: 0.95},
+  {name: 'Truyện tranh', font: 'Bangers-Regular.ttf', color: '#ffffff', stroke: 0.08, strokeColor: '#1d4ed8', shadow: 0.06, shadowColor: '#000000'},
+  {name: 'Viết tay', font: 'Pacifico-Regular.ttf', color: '#ffffff', shadow: 0.06, shadowColor: '#000000'},
+  {name: 'Cổ điển', font: 'Lobster-Regular.ttf', color: '#ffd6e7', stroke: 0.05, strokeColor: '#7a1238'},
+  {name: 'Neon', font: 'ChakraPetch-Bold.ttf', color: '#7df9ff', shadow: 0.05, shadowColor: '#0050ff'},
+  {name: 'Phụ đề', font: 'BeVietnamPro-Regular.ttf', color: '#ffffff', shadow: 0.06, shadowColor: '#000000', size: 0.045},
+];
+const TEXT_STYLE_KEYS = ['font', 'color', 'stroke', 'strokeColor', 'bg', 'bgOpacity', 'shadow', 'shadowColor'];
+const uid = () => Math.random().toString(36).slice(2, 10);
+const fontKey = k => fonts.some(f => f.key === k) ? k : (fonts[0] || {}).key;
+const fontName = k => (fonts.find(f => f.key === k) || {name: k}).name;
+
+function canvasOf() {
+  const c = {...DEFAULT_CANVAS, ...(tpl.canvas || {})};
+  c.video = {...DEFAULT_CANVAS.video, ...(c.video || {})};
+  return c;
+}
+const srcDims = () => tpl && tpl.frame ? [tpl.frame.w, tpl.frame.h] : [1920, 1080];
+const even = v => Math.max(2, Math.round(v / 2) * 2);
+function canvasDims() {  // giống editor.canvas_size bên Python
+  const [sw, sh] = srcDims(), r = canvasOf().ratio;
+  if (r === 'original') return [even(sw), even(sh)];
+  const [a, b] = r.split(':').map(Number), short = Math.min(Math.max(Math.min(sw, sh), 720), 2160);
+  return a >= b ? [even(short * a / b), even(short)] : [even(short), even(short * b / a)];
+}
+function videoRect(CW, CH) {  // giống editor.video_rect
+  const [sw, sh] = srcDims(), v = canvasOf().video;
+  const s = (v.mode === 'fill' ? Math.max : Math.min)(CW / sw, CH / sh) * v.scale;
+  const vw = sw * s, vh = sh * s;
+  return [v.cx * CW - vw / 2, v.cy * CH - vh / 2, vw, vh];
+}
+const sampleTitle = () => tpl && tpl.frame && tpl.frame.video
+  ? baseName(tpl.frame.video).replace(/\.[^.]+$/, '').replace(/\s*\[[A-Za-z0-9-]+\]$/, '') : 'Tiêu đề video mẫu';
+function hexA(hex, a) {
+  const n = parseInt((hex || '#000000').slice(1), 16);
+  return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`;
+}
+const nowT = () => $('fgv').currentTime || 0;
+
+// ---------- Lịch sử (hoàn tác / làm lại) và lưu
+let history = [], hIdx = -1, saveTimer = null;
+const snapshot = () => { const {media, ...t} = tpl; return JSON.stringify(t); };
+function resetHistory() { history = [snapshot()]; hIdx = 0; updUndo(); }
+function updUndo() { $('undoBtn').disabled = hIdx <= 0; $('redoBtn').disabled = hIdx >= history.length - 1; }
+function commit(now) {
+  $('saveState').textContent = 'Đang lưu…';
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    const s = snapshot();
+    if (s !== history[hIdx]) { history = history.slice(0, hIdx + 1); history.push(s); if (history.length > 100) history.shift(); hIdx = history.length - 1; }
+    updUndo();
+    await api('/api/template/save', {template: JSON.parse(s)});
+    $('saveState').textContent = 'Đã lưu';
+    const t = templates.find(t => t.id === tpl.id);
+    if (t && t.name !== tpl.name) { t.name = tpl.name; fillTemplateSelects(); }
+  }, now ? 0 : 350);
+}
+function restore(i) {
+  const media = tpl.media;
+  hIdx = i; tpl = {...JSON.parse(history[i]), media};
+  if (!tpl.layers.some(l => l.id === selId)) selId = null;
+  $('tplName').value = tpl.name || '';
+  renderAll(); updUndo();
+  api('/api/template/save', {template: JSON.parse(history[i])});
+}
+const undo = () => { if (hIdx > 0) restore(hIdx - 1); };
+const redo = () => { if (hIdx < history.length - 1) restore(hIdx + 1); };
+$('undoBtn').onclick = undo; $('redoBtn').onclick = redo;
+
+// ---------- Danh sách mẫu
+function fillTemplateSelects() {
+  const opts = templates.map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join('');
+  const keep = (sel, val, extra) => { sel.innerHTML = extra + opts; sel.value = [...sel.options].some(o => o.value === val) ? val : sel.options[0]?.value || ''; };
+  keep($('afterTpl'), settings.after_template || '', '<option value="">Không áp mẫu</option>');
+  keep($('exTpl'), $('exTpl').value || (tpl && tpl.id) || '', templates.length ? '' : '<option value="">(chưa có mẫu)</option>');
+  keep($('tplSelect'), tpl ? tpl.id : '', '');
+  $('edMain').classList.toggle('hidden', !templates.length);
+  $('noTpl').classList.toggle('hidden', !!templates.length);
+  renderFiles();
+}
+
+async function reloadTemplates() {
+  const r = await api('/api/templates', {});
+  templates = r.templates; setFonts(r.fonts);
+  $('encoder').textContent = r.encoder === 'CPU'
+    ? 'CPU (GPU NVIDIA chưa dùng được — cập nhật driver NVIDIA để render nhanh hơn)' : r.encoder;
+  fillTemplateSelects();
+}
+
+function setFonts(list) {
+  fonts = list;
+  let css = '';
+  for (const f of fonts) css += `@font-face{font-family:"f_${f.key}";src:url("/font/${encodeURIComponent(f.key)}")}\n`;
+  let st = $('fontFaces'); if (!st) { st = document.createElement('style'); st.id = 'fontFaces'; document.head.appendChild(st); }
+  st.textContent = css;
+  renderPresets();
+}
+
+async function loadTemplate(id) {
+  tpl = await api('/api/template/get', {id});
+  tpl.layers = tpl.layers || [];
+  selId = null; editingId = null;
+  $('tplName').value = tpl.name || '';
+  loadMedia();
+  fillTemplateSelects(); resetHistory(); renderAll();
+}
+
+async function createTemplate(copyFrom) {
+  const t = await api('/api/template/new', {name: copyFrom ? `${tpl.name} (bản sao)` : `Mẫu ${templates.length + 1}`, copy_from: copyFrom});
+  await reloadTemplates(); await loadTemplate(t.id);
+  if (!copyFrom) $('tplName').select();
+}
+$('tplSelect').onchange = () => loadTemplate($('tplSelect').value);
+$('tplNew').onclick = () => createTemplate();
+$('tplFirst').onclick = () => createTemplate();
+$('tplDup').onclick = () => tpl && createTemplate(tpl.id);
+$('tplDel').onclick = async () => {
+  if (!tpl || !confirm(`Xoá mẫu “${tpl.name}”?`)) return;
+  await api('/api/template/delete', {id: tpl.id}); tpl = null;
+  await reloadTemplates();
+  if (templates.length) loadTemplate(templates[0].id);
+};
+$('tplName').addEventListener('input', () => { tpl.name = $('tplName').value; commit(); });
+
+// ---------- Video xem trước
+function loadMedia() {
+  const fgv = $('fgv'), bgv = $('bgv');
+  fgv.pause();
+  const src = tpl.media ? `/media/${tpl.media}` : '';
+  if (fgv.getAttribute('src') !== src) {
+    if (src) { fgv.src = src; bgv.src = src; } else { fgv.removeAttribute('src'); bgv.removeAttribute('src'); fgv.load(); bgv.load(); }
+  }
+  const img = tpl.frame ? `/tpl/frame/${tpl.id}.jpg?v=${encodeURIComponent(tpl.frame.video)}` : '';
+  $('fgi').src = img; $('bgi').src = img;
+  $('fgv').classList.toggle('hidden', !src); $('bgv').classList.toggle('hidden', !src);
+  $('fgi').classList.toggle('hidden', !!src || !img); $('bgi').classList.toggle('hidden', !!src || !img);
+  $('vidPh').classList.toggle('hidden', !!(src || img));
+  $('seek').max = (tpl.frame && tpl.frame.duration) || 0; $('seek').value = 0;
+  $('playBtn').disabled = !src;
+  updTime();
+}
+function updTime() {
+  const d = (tpl && tpl.frame && tpl.frame.duration) || $('fgv').duration || 0;
+  $('tLabel').textContent = `${fmtTime(nowT())} / ${fmtTime(d)}`;
+  $('seek').value = nowT();
+  const t = nowT();
+  for (const el of $('stLayers').children) {
+    const L = tpl.layers.find(l => l.id === el.dataset.id); if (!L) continue;
+    const s = L.start ?? null, e = L.end ?? null;
+    el.classList.toggle('outside', (s !== null && s !== '' && t < s) || (e !== null && e !== '' && t > e));
+  }
+}
+$('playBtn').onclick = () => { const v = $('fgv'); v.paused ? v.play() : v.pause(); };
+$('fgv').addEventListener('play', () => { $('playBtn').textContent = '❚❚'; $('bgv').currentTime = nowT(); $('bgv').play(); tick(); });
+$('fgv').addEventListener('pause', () => { $('playBtn').textContent = '▶'; $('bgv').pause(); $('bgv').currentTime = nowT(); });
+$('fgv').addEventListener('seeked', () => { $('bgv').currentTime = nowT(); updTime(); });
+$('fgv').addEventListener('loadedmetadata', updTime);
+function tick() { updTime(); if (!$('fgv').paused) requestAnimationFrame(tick); }
+$('seek').addEventListener('input', () => { $('fgv').currentTime = parseFloat($('seek').value); updTime(); });
+$('frameBtn').onclick = async () => {
+  const r = await api('/api/template/frame', {id: tpl.id});
+  if (!r.id) return;
+  tpl.frame = r.frame; tpl.media = r.media;
+  tpl.layers.forEach(setLogoHeight);
+  loadMedia(); renderAll(); commit();
+};
+
+// ---------- Khung hình
+function renderRatios() {
+  const r = canvasOf().ratio;
+  $('ratios').innerHTML = RATIOS.map(([k, t]) => {
+    const [a, b] = k === 'original' ? srcDims() : k.split(':').map(Number);
+    return `<button data-ratio="${k}" class="${k === r ? 'on' : ''}"><i style="width:${Math.round(16 * a / b)}px;max-width:30px"></i>${t}</button>`;
+  }).join('');
+}
+$('ratios').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  tpl.canvas = {...canvasOf(), ratio: b.dataset.ratio};
+  tpl.layers.forEach(setLogoHeight);
+  renderAll(); commit();
+});
+
+let stageW = 0, stageH = 0;
+function layoutStage() {
+  if (!tpl) return;
+  const [CW, CH] = canvasDims(), ar = CW / CH;
+  const wrap = $('stageWrap'), avW = wrap.clientWidth - 28, avH = Math.max(260, window.innerHeight - 385);
+  if (avW <= 0) return;
+  stageW = Math.min(avW, avH * ar); stageH = stageW / ar;
+  $('stage').style.width = stageW + 'px'; $('stage').style.height = stageH + 'px';
+  renderStage();
+}
+new ResizeObserver(() => { if (!$('tab-editor').classList.contains('hidden')) layoutStage(); }).observe($('stageWrap'));
+window.addEventListener('resize', () => { if (!$('tab-editor').classList.contains('hidden')) layoutStage(); });
+
+function renderStage() {
+  if (!tpl || !stageW) return;
+  const c = canvasOf(), [CW, CH] = canvasDims(), k = stageW / CW;
+  $('stBg').style.background = c.bg === 'color' ? c.bgColor : '#000';
+  $('bgv').style.visibility = $('bgi').style.visibility = c.bg === 'color' ? 'hidden' : 'visible';
+  const [vx, vy, vw, vh] = videoRect(CW, CH);
+  Object.assign($('stVid').style, {left: vx * k + 'px', top: vy * k + 'px', width: vw * k + 'px', height: vh * k + 'px'});
+  $('stVid').classList.toggle('sel', selId === '__video');
+  const short = Math.min(stageW, stageH);
+  $('stLayers').innerHTML = tpl.layers.map(L => {
+    const cls = `layer ${L.id === selId ? 'sel' : ''} ${L.hidden ? 'off' : ''} ${L.type === 'cover' ? 'cover-' + (L.mode || 'blur') : ''}`;
+    let style = `left:${L.x * 100}%;top:${L.y * 100}%;width:${L.w * 100}%;`, inner = '', handles = '<div class="rs"></div>';
+    if (L.type === 'logo') {
+      style += `height:${L.h * 100}%;opacity:${L.opacity ?? 1}`;
+      inner = L.src ? `<img src="/tpl/${L.src}">` : '';
+    } else if (L.type === 'cover') {
+      style += `height:${L.h * 100}%;`;
+      const m = L.mode || 'blur';
+      if (m === 'blur') style += `backdrop-filter:blur(${(L.strength || 20) * stageH / CH * 1.4}px);`;
+      if (m === 'color') style += `background:${L.color || '#000000'};`;
+    } else if (L.type === 'text') {
+      handles += '<div class="rw"></div>';
+      const size = (L.size || 0.05) * short;
+      const hasBg = (L.bgOpacity || 0) > 0;
+      const deco = [
+        hasBg ? `background:${hexA(L.bg || '#000000', L.bgOpacity)};padding:${size * 0.3}px;margin:${-size * 0.3}px;-webkit-box-decoration-break:clone;box-decoration-break:clone` : '',
+        (L.stroke || 0) > 0 ? `-webkit-text-stroke:${Math.max(1, L.stroke * size) * 2}px ${L.strokeColor || '#000'}` : '',
+        (L.shadow || 0) > 0 ? `text-shadow:${L.shadow * size}px ${L.shadow * size}px 0 ${hexA(L.shadowColor || '#000000', 0.75)}` : '',
+      ].filter(Boolean).join(';');
+      const editing = editingId === L.id;
+      const text = editing ? esc(L.text) : esc((L.text || '').replaceAll('{title}', sampleTitle())) || '&nbsp;';
+      inner = `<div class="txt" style="text-align:${L.align || 'center'};font-family:'f_${L.font}',sans-serif;font-size:${size}px;color:${L.color || '#fff'}">` +
+        `<span ${editing ? 'contenteditable="plaintext-only"' : ''} style="${hasBg ? 'display:inline-block;' : ''}${deco}">${text}</span></div>`;
+    }
+    return `<div class="${cls}" data-id="${L.id}" style="${style}">${inner}${handles}</div>`;
+  }).join('');
+  updTime();
+  if (editingId) {
+    const span = $('stLayers').querySelector(`[data-id="${editingId}"] [contenteditable]`);
+    if (span) {
+      span.focus();
+      const r = document.createRange(); r.selectNodeContents(span); const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+      span.addEventListener('blur', () => { finishEdit(span.innerText.replace(/\n$/, '')); }, {once: true});
+      span.addEventListener('keydown', e => { if (e.key === 'Escape') span.blur(); e.stopPropagation(); });
+    }
+  }
+}
+function finishEdit(text) {
+  const L = tpl.layers.find(l => l.id === editingId);
+  editingId = null;
+  if (L && text !== L.text) { L.text = text; commit(); }
+  renderStage(); renderLayerList(); renderProps();
+}
+
+function renderAll() { renderRatios(); layoutStage(); renderLayerList(); renderProps(); }
+
+// ---------- Thêm lớp
+function setLogoHeight(L) {
+  if (L.type === 'logo' && L.ar) { const [CW, CH] = canvasDims(); L.h = L.w * L.ar * CW / CH; }
+}
+function addLayer(type, extra) {
+  const L = {id: uid(), type, x: 0.05, y: 0.05, w: 0.15, h: 0.1};
+  if (type === 'text') Object.assign(L, {x: 0.1, y: 0.78, w: 0.8, text: '{title}', font: fontKey('BeVietnamPro-Bold.ttf'),
+    size: 0.055, color: '#ffffff', align: 'center', bg: '#000000', bgOpacity: 0, stroke: 0.06, strokeColor: '#000000',
+    shadow: 0, shadowColor: '#000000'}, extra || {});
+  if (type === 'cover') Object.assign(L, {x: 0.8, y: 0.04, w: 0.16, h: 0.09, mode: 'blur', strength: 20, color: '#000000'});
+  if (type === 'logo') Object.assign(L, {x: 0.86, y: 0.04, w: 0.1, opacity: 1});
+  if (type === 'cover') tpl.layers.unshift(L); else tpl.layers.push(L);  // vùng che nằm dưới cùng
+  selId = L.id;
+  renderStage(); renderLayerList(); renderProps(); commit();
+  if (type === 'logo') pickLogo(L);
+}
+document.querySelectorAll('[data-add]').forEach(b => b.onclick = () => addLayer(b.dataset.add));
+
+async function pickLogo(L) {
+  const r = await api('/api/template/logo', {});
+  if (!r.src) { if (!L.src) { tpl.layers = tpl.layers.filter(l => l !== L); selId = null; renderAll(); commit(); } return; }
+  L.src = r.src; L.ar = r.h / r.w; setLogoHeight(L);
+  renderStage(); renderProps(); commit();
+}
+
+function renderPresets() {
+  $('presets').innerHTML = PRESETS.map((p, i) => {
+    const size = 19;
+    const deco = [
+      (p.bgOpacity || 0) > 0 ? `background:${hexA(p.bg, p.bgOpacity)};padding:2px 8px;border-radius:2px` : '',
+      p.stroke ? `-webkit-text-stroke:${Math.max(1, p.stroke * size) * 2}px ${p.strokeColor}` : '',
+      p.shadow ? `text-shadow:${p.shadow * size}px ${p.shadow * size}px 0 ${hexA(p.shadowColor, .75)}` : '',
+    ].filter(Boolean).join(';');
+    return `<div class="preset" data-preset="${i}" title="${esc(p.name)}"><span style="font-family:'f_${fontKey(p.font)}';color:${p.color};${deco}">${esc(p.name)}</span></div>`;
+  }).join('');
+}
+$('presets').addEventListener('click', e => {
+  const el = e.target.closest('[data-preset]'); if (!el || !tpl) return;
+  const p = PRESETS[+el.dataset.preset];
+  const style = {stroke: 0, bgOpacity: 0, shadow: 0, ...p, font: fontKey(p.font)};
+  delete style.name;
+  const L = tpl.layers.find(l => l.id === selId);
+  if (L && L.type === 'text') {
+    for (const k of TEXT_STYLE_KEYS) L[k] = style[k] ?? L[k];
+    renderStage(); renderProps(); commit();
+  } else addLayer('text', style);
+});
+
+// ---------- Danh sách lớp (trên cùng = lớp nằm trên)
+function layerLabel(L) {
+  if (L.type === 'text') return (L.text || '').split('\n')[0].slice(0, 40) || 'Chữ';
+  if (L.type === 'cover') return `${LAYER_NAMES.cover} · ${COVER_MODES[L.mode || 'blur']}`;
+  return LAYER_NAMES[L.type];
+}
+function renderLayerList() {
+  if (!tpl) return;
+  const items = tpl.layers.map((L, i) => `
+    <div class="li ${L.id === selId ? 'on' : ''} ${L.hidden ? 'hid' : ''}" data-id="${L.id}">
+      <span class="ic">${LAYER_ICONS[L.type]}</span><span class="n">${esc(layerLabel(L))}</span>
+      <button data-act="up" title="Đưa lên trên" ${i === tpl.layers.length - 1 ? 'disabled' : ''}>▲</button>
+      <button data-act="down" title="Đưa xuống dưới" ${i === 0 ? 'disabled' : ''}>▼</button>
+      <button data-act="hide" title="Ẩn / hiện">${L.hidden ? '◌' : '●'}</button>
+    </div>`).reverse().join('');
+  $('layerList').innerHTML = items + `<div class="li ${selId === '__video' ? 'on' : ''}" data-id="__video"><span class="ic">▶</span><span class="n">Video & khung hình</span></div>`;
+}
+$('layerList').addEventListener('click', e => {
+  const li = e.target.closest('.li'); if (!li) return;
+  if (li.dataset.id === '__video') { select('__video'); return; }
+  const i = tpl.layers.findIndex(l => l.id === li.dataset.id), L = tpl.layers[i];
+  const act = e.target.closest('button')?.dataset.act;
+  if (act === 'up' && i < tpl.layers.length - 1) [tpl.layers[i + 1], tpl.layers[i]] = [tpl.layers[i], tpl.layers[i + 1]];
+  else if (act === 'down' && i > 0) [tpl.layers[i - 1], tpl.layers[i]] = [tpl.layers[i], tpl.layers[i - 1]];
+  else if (act === 'hide') L.hidden = !L.hidden;
+  else { select(L.id); return; }
+  renderStage(); renderLayerList(); commit();
+});
+function select(id) { selId = id; renderStage(); renderLayerList(); renderProps(); }
+
+// ---------- Bảng thuộc tính
+const sl = (k, min, max, step, v, fmt) =>
+  `<div class="grp"><div class="lbl">${fmt[0]}<b data-show="${k}">${fmt[1](v)}</b></div><input type="range" data-k="${k}" min="${min}" max="${max}" step="${step}" value="${v}"></div>`;
+const colorRow = (k, v) => `<div class="swatches"><input type="color" data-k="${k}" value="${v}">${
+  SWATCHES.map(c => `<button class="sw ${c === (v || '').toLowerCase() ? 'on' : ''}" data-color="${k}:${c}" style="background:${c}" title="${c}"></button>`).join('')}</div>`;
+const pctF = v => Math.round(v * 100) + '%';
+const timeBlock = L => `<div class="grp"><div class="lbl">Thời gian hiện</div>
+  <div class="row">Từ <input type="number" data-k="start" step="0.5" min="0" value="${L.start ?? ''}" placeholder="đầu">
+  <button class="icon" data-now="start" title="Lấy thời điểm đang xem">⏱</button>
+  đến <input type="number" data-k="end" step="0.5" min="0" value="${L.end ?? ''}" placeholder="cuối">
+  <button class="icon" data-now="end" title="Lấy thời điểm đang xem">⏱</button></div>
+  <div class="help">Để trống = hiện suốt video. Bấm ⏱ để lấy thời điểm đang xem.</div></div>`;
+const posBlock = L => `<div class="grp"><div class="lbl">Vị trí nhanh</div>
+  <div class="corners">
+    <button data-pos="tl" title="Góc trên trái">↖</button><button data-pos="tc" title="Giữa trên">↑</button>
+    <button data-pos="cc" title="Chính giữa">●</button><button data-pos="bc" title="Giữa dưới">↓</button>
+    <button data-pos="tr" title="Góc trên phải">↗</button>
+  </div>
+  <div class="corners"><button data-pos="bl" title="Góc dưới trái">↙</button><button data-pos="hc" title="Căn giữa ngang">⇔</button>
+    <button data-pos="vc" title="Căn giữa dọc">⇕</button><button data-pos="cl" title="Giữa trái">←</button><button data-pos="br" title="Góc dưới phải">↘</button></div>
+  <details><summary>Vị trí chính xác (%)</summary>
+    <div class="row">X <input type="number" data-k="x" step="0.5" value="${+(L.x * 100).toFixed(1)}">
+    Y <input type="number" data-k="y" step="0.5" value="${+(L.y * 100).toFixed(1)}"></div></details></div>`;
+
+function renderProps() {
+  if (!tpl) return;
+  const P = $('props');
+  if (!selId || selId === '__video') {
+    const c = canvasOf(), [CW, CH] = canvasDims();
+    P.innerHTML = `<div class="head"><h3>Video & khung hình</h3></div>
+      <div class="grp"><div class="lbl">Nền phía sau video</div>
+        <span class="seg"><button data-cv="bg:blur" class="${c.bg !== 'color' ? 'on' : ''}">Làm mờ video</button><button data-cv="bg:color" class="${c.bg === 'color' ? 'on' : ''}">Màu</button></span>
+        ${c.bg === 'color' ? colorRow('bgColor', c.bgColor) : ''}</div>
+      <div class="grp"><div class="lbl">Video trong khung</div>
+        <span class="seg"><button data-cv="mode:fit" class="${c.video.mode !== 'fill' ? 'on' : ''}">Vừa khung</button><button data-cv="mode:fill" class="${c.video.mode === 'fill' ? 'on' : ''}">Lấp đầy</button></span></div>
+      ${sl('vscale', 0.3, 3, 0.01, c.video.scale, ['Thu phóng video', pctF])}
+      <div class="row"><button class="small" data-cv="reset">Đặt lại vị trí video</button></div>
+      <p class="help">Video xuất ra: <b>${CW} × ${CH}</b>${tpl.frame ? '' : ' (tính theo video 1920×1080 — chọn video xem trước để chính xác)'}.<br>
+      Kéo video trên khung để di chuyển, kéo chấm tròn ở góc để phóng to.</p>
+      <p class="help">Chọn một lớp (chữ, logo…) trên khung hoặc trong danh sách bên trái để chỉnh.</p>`;
+    return;
+  }
+  const L = tpl.layers.find(l => l.id === selId); if (!L) { selId = null; return renderProps(); }
+  let h = `<div class="head"><h3>${LAYER_NAMES[L.type]}</h3>
+    <button class="icon" data-act="dup" title="Nhân bản (Ctrl+D)">Nhân bản</button><button class="icon" data-act="del" title="Xoá (Delete)">Xoá</button></div>`;
+  if (L.type === 'text') {
+    h += `<div class="grp"><div class="lbl">Nội dung <button class="icon" data-act="title">+ Tên video</button></div>
+      <textarea rows="3" data-k="text">${esc(L.text)}</textarea>
+      <div class="help"><b>{title}</b> sẽ tự thay bằng tên của từng video khi xuất.</div></div>
+      <div class="grp"><div class="lbl">Font chữ</div><div class="fontpick">
+        <button class="fontbtn" data-act="fonts" style="font-family:'f_${L.font}'"><span>${esc(fontName(L.font))}</span><span>▾</span></button>
+        <div class="fontlist hidden" id="fontList"></div></div></div>
+      ${sl('size', 0.015, 0.2, 0.001, L.size, ['Cỡ chữ', v => Math.round(v * 1000)])}
+      <div class="grp"><div class="lbl">Căn lề</div><span class="seg">${['left', 'center', 'right'].map(a =>
+        `<button data-align="${a}" class="${(L.align || 'center') === a ? 'on' : ''}">${{left: 'Trái', center: 'Giữa', right: 'Phải'}[a]}</button>`).join('')}</span></div>
+      <div class="grp"><div class="lbl">Màu chữ</div>${colorRow('color', L.color)}</div>
+      ${sl('stroke', 0, 0.15, 0.005, L.stroke || 0, ['Viền chữ', pctF])}${(L.stroke || 0) > 0 ? colorRow('strokeColor', L.strokeColor) : ''}
+      ${sl('bgOpacity', 0, 1, 0.05, L.bgOpacity || 0, ['Nền chữ', pctF])}${(L.bgOpacity || 0) > 0 ? colorRow('bg', L.bg) : ''}
+      ${sl('shadow', 0, 0.15, 0.005, L.shadow || 0, ['Bóng đổ', pctF])}${(L.shadow || 0) > 0 ? colorRow('shadowColor', L.shadowColor) : ''}`;
+  }
+  if (L.type === 'logo') {
+    h += `<div class="grp"><button class="small" data-act="pickLogo">${L.src ? 'Đổi ảnh…' : 'Chọn ảnh…'}</button></div>
+      ${sl('w', 0.02, 1, 0.005, L.w, ['Kích thước', pctF])}
+      ${sl('opacity', 0.1, 1, 0.05, L.opacity ?? 1, ['Độ đậm', pctF])}`;
+  }
+  if (L.type === 'cover') {
+    h += `<div class="grp"><div class="lbl">Cách che</div><span class="seg">${Object.entries(COVER_MODES).map(([k, v]) =>
+        `<button data-mode="${k}" class="${k === (L.mode || 'blur') ? 'on' : ''}">${v}</button>`).join('')}</span>
+      <div class="help">Đặt khung lên đúng chỗ logo cũ rồi kéo chấm tròn để vừa kích thước.</div></div>
+      ${(L.mode || 'blur') === 'blur' ? sl('strength', 5, 60, 1, L.strength ?? 20, ['Độ mờ', v => v]) : ''}
+      ${L.mode === 'color' ? `<div class="grp"><div class="lbl">Màu</div>${colorRow('color', L.color)}</div>` : ''}`;
+  }
+  h += posBlock(L) + timeBlock(L);
+  $('props').innerHTML = h;
+}
+
+function setPos(L, pos) {
+  const m = 0.03, el = $('stLayers').querySelector(`[data-id="${L.id}"]`);
+  const w = L.w, hh = el ? el.offsetHeight / stageH : (L.h || 0.1);
+  const X = {l: m, c: (1 - w) / 2, r: 1 - w - m}, Y = {t: m, c: (1 - hh) / 2, b: 1 - hh - m};
+  if (pos === 'hc') L.x = X.c; else if (pos === 'vc') L.y = Y.c;
+  else if (pos === 'cl') { L.x = X.l; L.y = Y.c; }
+  else { L.y = Y[pos[0]]; L.x = X[pos[1] === 'c' ? 'c' : pos[1]]; }
+}
+
+$('props').addEventListener('input', e => {
+  const k = e.target.dataset.k; if (!k) return;
+  let v = e.target.value;
+  if (e.target.type === 'range' || e.target.type === 'number') v = v === '' ? null : parseFloat(v);
+  const show = $('props').querySelector(`[data-show="${k}"]`);
+  if (k === 'vscale' || k === 'bgColor') {
+    const c = canvasOf();
+    if (k === 'vscale') c.video.scale = v; else c.bgColor = v;
+    tpl.canvas = c;
+    if (show) show.textContent = pctF(v);
+    renderStage(); commit(); return;
+  }
+  const L = tpl.layers.find(l => l.id === selId);
+  if (['x', 'y'].includes(k)) v = (v ?? 0) / 100;
+  L[k] = v;
+  if (k === 'w') setLogoHeight(L);
+  if (show) show.textContent = k === 'size' ? Math.round(v * 1000) : k === 'strength' ? v : pctF(v);
+  renderStage(); if (k === 'text') renderLayerList();
+  if (['stroke', 'bgOpacity', 'shadow'].includes(k) && (v > 0) !== !!e.target.dataset.on) { e.target.dataset.on = v > 0 ? '1' : ''; renderPropsKeepFocus(e.target); }
+  commit();
+});
+function renderPropsKeepFocus(input) {
+  const k = input.dataset.k; renderProps();
+  const n = $('props').querySelector(`[data-k="${k}"]`); if (n) n.focus();
+}
+$('props').addEventListener('click', async e => {
+  const b = e.target.closest('button, [data-font]'); if (!b) return;
+  const L = tpl.layers.find(l => l.id === selId);
+  if (b.dataset.cv) {
+    const c = canvasOf(), [key, val] = b.dataset.cv.split(':');
+    if (key === 'bg') c.bg = val;
+    if (key === 'mode') { c.video.mode = val; c.video.scale = 1; c.video.cx = c.video.cy = 0.5; }
+    if (key === 'reset') { c.video.scale = 1; c.video.cx = c.video.cy = 0.5; }
+    tpl.canvas = c; renderStage(); renderProps(); commit(); return;
+  }
+  if (b.dataset.color) { const [k, c] = b.dataset.color.split(':');
+    if (k === 'bgColor') tpl.canvas = {...canvasOf(), bgColor: c}; else L[k] = c;
+    renderStage(); renderProps(); commit(); return; }
+  if (b.dataset.align) { L.align = b.dataset.align; }
+  else if (b.dataset.mode) { L.mode = b.dataset.mode; }
+  else if (b.dataset.pos) { setPos(L, b.dataset.pos); }
+  else if (b.dataset.now) { L[b.dataset.now] = Math.round(nowT() * 10) / 10; }
+  else if (b.dataset.font) { L.font = b.dataset.font; }
+  else if (b.dataset.act === 'addFont') {
+    const r = await api('/api/font/add', {});
+    if (r.added) { setFonts(r.fonts); toast(`Đã thêm ${r.added} font`); }
+    renderProps(); return;
+  }
+  else if (b.dataset.act === 'fonts') { toggleFontList(L); return; }
+  else if (b.dataset.act === 'title') { L.text = (L.text ? L.text + ' ' : '') + '{title}'; }
+  else if (b.dataset.act === 'pickLogo') { pickLogo(L); return; }
+  else if (b.dataset.act === 'dup') { duplicate(); return; }
+  else if (b.dataset.act === 'del') { removeSelected(); return; }
+  else return;
+  renderStage(); renderLayerList(); renderProps(); commit();
+});
+function toggleFontList(L) {
+  const fl = $('fontList');
+  if (!fl.classList.contains('hidden')) { fl.classList.add('hidden'); return; }
+  fl.innerHTML = fonts.map(f => `<div data-font="${esc(f.key)}" class="${f.key === L.font ? 'on' : ''}" style="font-family:'f_${f.key}'">${esc(f.name)} — Tiếng Việt</div>`).join('') +
+    '<div class="add" data-font="" data-act="addFont">+ Thêm font từ máy (.ttf, .otf)…</div>';
+  fl.classList.remove('hidden');
+  fl.querySelector('.on')?.scrollIntoView({block: 'center'});
+}
+document.addEventListener('pointerdown', e => {
+  const fl = $('fontList'); if (fl && !fl.classList.contains('hidden') && !e.target.closest('.fontpick')) fl.classList.add('hidden');
+});
+
+function duplicate() {
+  const L = tpl.layers.find(l => l.id === selId); if (!L) return;
+  const C = {...L, id: uid(), x: L.x + 0.03, y: L.y + 0.03};
+  tpl.layers.splice(tpl.layers.indexOf(L) + 1, 0, C); select(C.id); commit();
+}
+function removeSelected() {
+  tpl.layers = tpl.layers.filter(l => l.id !== selId); select(null); commit();
+}
+
+// ---------- Kéo thả, đổi kích thước, đường gióng
+const SNAP = 6;
+$('stage').addEventListener('dblclick', e => {
+  const el = e.target.closest('.layer'); if (!el) return;
+  const L = tpl.layers.find(l => l.id === el.dataset.id);
+  if (L && L.type === 'text') { editingId = L.id; selId = L.id; renderStage(); renderProps(); }
+});
+$('stage').addEventListener('pointerdown', e => {
+  if (e.target.isContentEditable || e.button !== 0) return;
+  const el = e.target.closest('.layer') || e.target.closest('.vid');
+  if (!el) { select(null); return; }
+  const isVideo = el.dataset.id === '__video';
+  if (selId !== el.dataset.id) select(el.dataset.id);
+  const target = $('stage').querySelector(isVideo ? '#stVid' : `.layer[data-id="${selId}"]`);
+  const mode = e.target.classList.contains('rs') ? 'scale' : e.target.classList.contains('rw') ? 'width' : 'move';
+  const L = isVideo ? null : tpl.layers.find(l => l.id === selId);
+  const c = canvasOf();
+  const start = {x: e.clientX, y: e.clientY, L: L && {...L}, v: {...c.video},
+    bw: target.offsetWidth, bh: target.offsetHeight, bl: target.offsetLeft, bt: target.offsetTop};
+  $('stage').setPointerCapture(e.pointerId);
+  let moved = false;
+  const move = ev => {
+    const dx = ev.clientX - start.x, dy = ev.clientY - start.y;
+    if (!moved && Math.abs(dx) + Math.abs(dy) < 2) return;
+    moved = true;
+    let gv = false, gh = false;
+    if (mode === 'move') {
+      let left = start.bl + dx, top = start.bt + dy;
+      const cx = left + start.bw / 2, cy = top + start.bh / 2;
+      if (Math.abs(cx - stageW / 2) < SNAP) { left = stageW / 2 - start.bw / 2; gv = true; }
+      else if (Math.abs(left) < SNAP) left = 0; else if (Math.abs(left + start.bw - stageW) < SNAP) left = stageW - start.bw;
+      if (Math.abs(cy - stageH / 2) < SNAP) { top = stageH / 2 - start.bh / 2; gh = true; }
+      else if (Math.abs(top) < SNAP) top = 0; else if (Math.abs(top + start.bh - stageH) < SNAP) top = stageH - start.bh;
+      if (isVideo) { c.video.cx = (left + start.bw / 2) / stageW; c.video.cy = (top + start.bh / 2) / stageH; tpl.canvas = c; }
+      else { L.x = left / stageW; L.y = top / stageH; }
+    } else if (isVideo) {
+      const f = Math.max(0.1, (start.bw + dx * 2) / start.bw);
+      c.video.scale = Math.min(5, Math.max(0.2, start.v.scale * f)); tpl.canvas = c;
+    } else {
+      const f = Math.max(0.05, (start.bw + dx) / start.bw);
+      if (mode === 'width') L.w = Math.max(0.05, start.L.w * f);
+      else if (L.type === 'text') { L.w = start.L.w * f; L.size = Math.max(0.01, start.L.size * f); }
+      else if (L.type === 'cover') { L.w = Math.max(0.02, start.L.w + dx / stageW); L.h = Math.max(0.02, start.L.h + dy / stageH); }
+      else { L.w = Math.max(0.02, start.L.w * f); setLogoHeight(L); }
+    }
+    $('gv').style.display = gv ? 'block' : 'none'; $('gh').style.display = gh ? 'block' : 'none';
+    renderStage();
+  };
+  const up = () => {
+    $('stage').removeEventListener('pointermove', move); $('stage').removeEventListener('pointerup', up);
+    $('gv').style.display = $('gh').style.display = 'none';
+    if (moved) { renderProps(); commit(); }
+  };
+  $('stage').addEventListener('pointermove', move); $('stage').addEventListener('pointerup', up);
+  e.preventDefault();
+});
+
+document.addEventListener('keydown', e => {
+  if ($('tab-editor').classList.contains('hidden') || !tpl || typing()) return;
+  const ctrl = e.ctrlKey || e.metaKey;
+  if (ctrl && e.key.toLowerCase() === 'z' && !e.shiftKey) { e.preventDefault(); undo(); return; }
+  if (ctrl && (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey))) { e.preventDefault(); redo(); return; }
+  if (e.key === ' ') { e.preventDefault(); $('playBtn').click(); return; }
+  const L = tpl.layers.find(l => l.id === selId); if (!L) return;
+  if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); removeSelected(); return; }
+  if (ctrl && e.key.toLowerCase() === 'd') { e.preventDefault(); duplicate(); return; }
+  const step = e.shiftKey ? 0.01 : 0.002;
+  const d = {ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step]}[e.key];
+  if (d) { e.preventDefault(); L.x += d[0]; L.y += d[1]; renderStage(); commit(); }
+  if (e.key === 'Enter' && L.type === 'text') { e.preventDefault(); editingId = L.id; renderStage(); }
+});
+
+// ---------- Xuất ngay từ trình chỉnh sửa
+$('edExport').onclick = async () => {
+  const r = await api('/api/pick-videos', {});
+  if (!r.files.length) return;
+  await api('/api/render', {template: tpl.id, files: r.files, export_dir: settings.export_dir});
+  refreshJobs();
+  toast(`Đã đưa ${r.files.length} video vào hàng chờ xuất với mẫu “${tpl.name}”.`, true);
+};
+
+// ============================================================ Xuất hàng loạt
+let exportFiles = [];
+function renderFiles() {
+  $('files').innerHTML = exportFiles.length ? exportFiles.map((f, i) =>
+    `<div class="f"><span>${esc(baseName(f))}</span><button class="icon" data-rm="${i}">✕</button></div>`).join('')
+    : '<div class="empty">Bấm “+ Thêm video…” để chọn nhiều video cùng lúc (giữ Ctrl hoặc Shift khi chọn).</div>';
+  $('filesHead').textContent = `Video cần xuất (${exportFiles.length})`;
+  $('renderBtn').textContent = exportFiles.length ? `Xuất ${exportFiles.length} video` : 'Xuất';
+  $('renderBtn').disabled = !exportFiles.length || !$('exTpl').value;
+}
+$('addFiles').onclick = async () => {
+  const r = await api('/api/pick-videos', {});
+  for (const f of r.files) if (!exportFiles.includes(f)) exportFiles.push(f);
+  renderFiles();
+};
+$('clearFiles').onclick = () => { exportFiles = []; renderFiles(); };
+$('files').addEventListener('click', e => { const b = e.target.closest('[data-rm]'); if (b) { exportFiles.splice(+b.dataset.rm, 1); renderFiles(); } });
+$('exTpl').onchange = renderFiles;
+$('exEdit').onclick = () => { if ($('exTpl').value) { setTab('editor'); loadTemplate($('exTpl').value); } };
+$('pickExportBtn').onclick = async () => {
+  const r = await api('/api/pick-export-dir', {});
+  if (r.export_dir) { settings.export_dir = r.export_dir; $('exportDir').textContent = r.export_dir; }
+};
+$('renderBtn').onclick = async () => {
+  await api('/api/render', {template: $('exTpl').value, files: exportFiles, export_dir: settings.export_dir});
+  exportFiles = []; renderFiles(); refreshJobs();
+};
+
+// ============================================================ Khởi động
+(async () => {
+  settings = await api('/api/settings');
+  $('outdir').textContent = settings.outdir;
+  $('exportDir').textContent = settings.export_dir;
+  $('audioFormat').value = settings.audio_format;
+  $('subs').checked = !!settings.subs;
+  fillQualities(null);
+  setMode(settings.mode);
+  await reloadTemplates();
+  let tab = 'download'; try { tab = localStorage.getItem('tab') || tab; } catch {}
+  setTab(tab);
+  refreshJobs();
+  setInterval(refreshJobs, 800);
+  if (tab === 'download') $('url').focus();
+})();
+</script>
+</body>
+</html>
